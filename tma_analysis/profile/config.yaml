@@ -1,0 +1,45 @@
+__use_yte__: true
+slurm: true
+jobs: 64
+latency-wait: 60
+use-conda: true
+default-resources:
+    slurm_account: huber
+    slurm_partition: htc-el8
+    runtime: 720
+set-resources:
+    threshold_and_predict_cts:
+        mem_mb: 64000
+    compute_neighborhoods:
+        mem_mb: 256000
+    compute_neighborhoods_and_node_features:
+        mem_mb: 256000
+    compute_co_occurrence:
+        mem_mb: 16000
+    combine_co_occurrence_dfs:
+        mem_mb: 64000
+    store_centroids_as_csvs:
+        mem_mb: 8000
+    calculate_R_functions:
+        mem_mb: 32000
+    compute_dfs_for_figure_2:
+        mem_mb: 32000
+    combine_anndatas:
+        mem_mb: 32000
+    scimap:
+        mem_mb: 64000
+        runtime: 1440
+    squidpy_nhood_enrichment:
+        mem_mb: 16000
+        runtime: 30
+    scimap_conditional:
+        slurm_partition: bigmem
+        mem_mb: 64000
+        runtime: 1440
+    count_ct_abundances_within_neighborhood:
+        mem_mb: 64000
+    quantify_heterogeneity_within_neighborhoods:
+        mem_mb: 64000
+    squidpy_nhood_enrichment_subset:
+        mem_mb: 16000
+        runtime: 30

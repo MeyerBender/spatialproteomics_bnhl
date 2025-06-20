@@ -1,0 +1,15 @@
+name: spatialproteomics_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - jupyter
+  - pip
+  - tifffile
+  - numpy
+  - pandas
+  - yaml
+  - pip:
+    - torch
+    - scanpy
+    - git+https://github.com/sagar87/spatialproteomics

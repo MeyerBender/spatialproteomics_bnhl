@@ -1,0 +1,241 @@
+configfile: "config.yaml"
+
+image_path = config["paths"]["image_path"]
+marker_path = config["paths"]["marker_path"]
+segmentation_path = config["paths"]["segmentation_path"]
+zarr_path = config["paths"]["zarr_path"]
+threshold_path = config["paths"]["threshold_path"]
+mask_path = config["paths"]["mask_path"]
+csv_path = config["paths"]["csv_path"]
+adata_path = config["paths"]["adata_path"]
+spatialdata_path = config["paths"]["spatialdata_path"]
+squidpy_csv_path = config["paths"]["squidpy_csv_path"]
+
+# loading in all samples
+import os
+base_dir = config["paths"]["image_path"]
+sample_files = [os.path.join(base_dir, filename) for filename in os.listdir(base_dir) if filename.endswith('.qptiff')]
+sample_names = [os.path.splitext(os.path.basename(filename))[0] for filename in sample_files]
+
+
+rule all:
+    input:
+        expand(segmentation_path + "/{sample}/cellpose/01_dapi_segmentation_unprocessed.tif", sample=sample_names),
+        expand(segmentation_path + "/{sample}/stardist/01_dapi_segmentation_unprocessed.tif", sample=sample_names),
+        expand(segmentation_path + "/{sample}/cellpose/02_dapi_segmentation_processed.tif", sample=sample_names),
+        expand(zarr_path + "/{sample}.zarr", sample=sample_names),
+        expand(zarr_path + "/stardist/{sample}.zarr", sample=sample_names),
+        # expand(zarr_path + "/cellpose_with_labels/{sample}.zarr", sample=sample_names),
+        # expand(zarr_path + "/cellpose_homomorphic_with_labels/{sample}.zarr", sample=sample_names),
+        # expand(zarr_path + "/cellpose_with_homomorphic_filtering/{sample}.zarr", sample=sample_names),
+        expand(zarr_path + "/cellpose_bgcorr_with_labels/{sample}.zarr", sample=sample_names),
+        expand(zarr_path + "/cellpose_bgcorr_with_subtypes/{sample}.zarr", sample=sample_names),
+        expand(csv_path + "/{sample}.csv", sample=sample_names),
+        expand(csv_path + "/ripley/{sample}_ripley.csv", sample=sample_names),
+        expand(squidpy_csv_path + "/{sample}.csv", sample=sample_names),
+        expand(spatialdata_path + "/{sample}.zarr", sample=sample_names),
+    
+# === CELLPOSE ===
+rule dapi_segmentation:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff"
+    output:
+        mask_path = segmentation_path + "/{sample}/cellpose/01_dapi_segmentation_unprocessed.tif"
+    conda: 
+        "envs/spatialproteomics_env.yaml"
+    script:
+        "scripts/01_dapi_segmentation.py"
+        
+rule dapi_segmentation_processing:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff",
+        mask_path = segmentation_path + "/{sample}/cellpose/01_dapi_segmentation_unprocessed.tif",
+        parameter_config_path = "configs/dapi_segmentation_config.yaml"
+    output:
+        mask_path = segmentation_path + "/{sample}/cellpose/02_dapi_segmentation_processed.tif"
+    conda: 
+        "envs/spatialproteomics_env.yaml"
+    script:
+        "scripts/02_dapi_segmentation_processing.py"
+
+rule combine_into_zarr:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff",
+        segmentation_path = segmentation_path + "/{sample}/cellpose/02_dapi_segmentation_processed.tif"
+    output:
+        zarr_path = directory(zarr_path + "/{sample}.zarr")
+    script:
+        "scripts/03_combine_to_zarr.py"
+        
+# === STARDIST ===
+rule dapi_segmentation_stardist:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff"
+    output:
+        mask_path = segmentation_path + "/{sample}/stardist/01_dapi_segmentation_unprocessed.tif"
+    conda: 
+        "envs/stardist_env.yaml"
+    script:
+        "scripts/01_dapi_segmentation_stardist.py"
+        
+rule dapi_segmentation_processing_stardist:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff",
+        mask_path = segmentation_path + "/{sample}/stardist/01_dapi_segmentation_unprocessed.tif",
+        parameter_config_path = "configs/dapi_segmentation_config.yaml"
+    output:
+        mask_path = segmentation_path + "/{sample}/stardist/02_dapi_segmentation_processed.tif"
+    conda: 
+        "envs/stardist_env.yaml"
+    script:
+        "scripts/02_dapi_segmentation_processing.py"
+        
+rule combine_into_zarr_stardist:
+    input:
+        marker_path = marker_path,
+        image_path = image_path + "/{sample}.qptiff",
+        segmentation_path = segmentation_path + "/{sample}/stardist/02_dapi_segmentation_processed.tif"
+    output:
+        zarr_path = directory(zarr_path + "/stardist/{sample}.zarr")
+    script:
+        "scripts/03_combine_to_zarr.py"
+        
+# === HOMOMORPHIC FILTERING ===
+rule homomorphic_filtering:
+    input:
+        zarr_path = zarr_path + "/{sample}.zarr",
+    output:
+        zarr_path = directory(zarr_path + "/cellpose_with_homomorphic_filtering/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_2_env.yaml"
+    script:
+        "scripts/05_homomorphic_filtering.py"
+        
+        
+# === THRESHOLDING AND CT PREDICTION ===
+# doing this on cellpose
+rule threshold_and_predict_cts:
+    input:
+        zarr_path = zarr_path + "/{sample}.zarr",
+        threshold_path = threshold_path + "/{sample}.csv",
+        mask_path = mask_path + "/{sample}.npy",
+    output:
+        zarr_path = directory(zarr_path + "/cellpose_with_labels/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_2_env.yaml"
+    script:
+        "scripts/04_threshold_and_predict_cts.py"
+        
+
+# this is on the homomorphic filtered images
+rule threshold_and_predict_cts_from_homomorphic:
+    input:
+        zarr_path = zarr_path + "/cellpose_with_homomorphic_filtering/{sample}.zarr",
+        threshold_path = threshold_path + "/{sample}.csv",
+        mask_path = mask_path + "/{sample}.npy",
+    output:
+        zarr_path = directory(zarr_path + "/cellpose_homomorphic_with_labels/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_2_env.yaml"
+    script:
+        "scripts/06_threshold_and_predict_cts.py"
+        
+
+# this includes a very simple background correction
+rule threshold_and_predict_cts_with_background_correction:
+    input:
+        zarr_path = zarr_path + "/{sample}.zarr",
+        threshold_path = threshold_path + "/{sample}.csv",
+        mask_path = mask_path + "/{sample}.npy",
+    output:
+        zarr_path = directory(zarr_path + "/cellpose_bgcorr_with_labels/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_3_env.yaml"
+    script:
+        "scripts/07_threshold_and_predict_cts.py"
+        
+rule predict_subtypes_with_background_correction:
+    input:
+        zarr_path = zarr_path + "/cellpose_bgcorr_with_labels/{sample}.zarr",
+        threshold_path = "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/DLBCL_whole_slide/2025-03-07_thresholds.csv",
+        gating_tree = "data/gating_tree.yaml"
+    output:
+        zarr_path = directory(zarr_path + "/cellpose_bgcorr_with_subtypes/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_3_env.yaml"
+    script:
+        "scripts/08_predict_subtypes.py"
+        
+# === SPATIAL STATISTICS ===
+rule store_centroids_as_csvs:
+    input:
+        zarr_path = zarr_path + "/cellpose_bgcorr_with_subtypes/{sample}.zarr"
+    output:
+        csv_path = csv_path + "/{sample}.csv"
+    conda:
+        "envs/spatialproteomics_3_env.yaml"
+    script:
+        "scripts/09_store_centroids_as_csv.py"
+
+rule calculate_ripley:
+    input:
+        csv_input = csv_path + "/{sample}.csv",
+        mask_input = "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/DLBCL_whole_slide/masks_for_artefact_removal/csvs/{sample}.csv"
+    output:
+        ripley_csv = csv_path + "/ripley/{sample}_ripley.csv"
+    conda:
+        "envs/r_env.yaml"
+    shell:
+        """
+        Rscript scripts/10_ripley_alphabet.R -f {input.csv_input} -p {input.mask_input} -o {output.ripley_csv} -s {wildcards.sample}
+        """
+
+#rule calculate_ripley_cross:
+#    input:
+#        csv_input = csv_path + "/{sample}.csv",
+#        mask_input = "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/DLBCL_whole_slide/masks_for_artefact_removal/csvs/{sample}.csv"
+#    output:
+#        cross_csv = csv_path + "/ripley_cross/{sample}_cross.csv"
+#    conda:
+#        "envs/r_env.yaml"
+#    shell:
+#        """
+#        Rscript scripts/10_ripley_alphabet_cross.R -f {input.csv_input} -p {input.mask_input} -o {output.cross_csv} -s {wildcards.sample}
+#        """
+
+rule store_as_anndata:
+    input:
+        zarr_path = zarr_path + "/cellpose_bgcorr_with_subtypes/{sample}.zarr"
+    output:
+        adata_path = adata_path + "/{sample}.h5ad"
+    conda:
+        "envs/spatialproteomics_4_env.yaml"
+    script:
+        "scripts/11_export_to_anndata.py"
+        
+# doing this only for the first layer, no fine-grained subsets
+rule squidpy_nhood_enrichment:
+    input:
+        anndata_path = adata_path + "/{sample}.h5ad"
+    output:
+        csv_path = squidpy_csv_path + "/{sample}.csv"
+    conda:
+        "envs/squidpy_env.yaml"
+    script:
+        "scripts/12_squidpy.py"
+        
+rule store_as_spatialdata:
+    input:
+        zarr_path = zarr_path + "/cellpose_bgcorr_with_subtypes/{sample}.zarr",
+        stardist_path = segmentation_path + "/{sample}/stardist/01_dapi_segmentation_unprocessed.tif"
+    output:
+        spatialdata_path = directory(spatialdata_path + "/{sample}.zarr")
+    conda:
+        "envs/spatialdata_env.yaml"
+    script:
+        "scripts/13_export_to_spatialdata.py"

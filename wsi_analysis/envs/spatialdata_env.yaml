@@ -1,0 +1,14 @@
+name: spatialdata_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - jupyter
+  - pip
+  - pip:
+      - tifffile
+      - zarr==2.18.3
+      - spatialdata
+      - dask==2024.11.2
+      - spatialproteomics==0.7.2
+      - backports.tarfile

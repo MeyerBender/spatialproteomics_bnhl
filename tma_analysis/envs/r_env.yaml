@@ -1,0 +1,8 @@
+name: r_snakemake_env
+channels:
+ - conda-forge
+dependencies:
+ - r-base
+ - r-tidyverse
+ - r-spatstat.explore
+ - r-optparse

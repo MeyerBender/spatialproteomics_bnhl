@@ -1,0 +1,17 @@
+name: spatialproteomics_env
+channels:
+  - defaults
+  - nvidia
+dependencies:
+  - python=3.9
+  - jupyter
+  - pip
+  - tifffile
+  - numpy
+  - pandas
+  - yaml
+  - cudatoolkit
+  - cudnn
+  - cellpose
+  - pip:
+    - git+https://github.com/sagar87/spatialproteomics

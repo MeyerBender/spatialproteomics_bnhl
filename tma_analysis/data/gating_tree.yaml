@@ -1,0 +1,46 @@
+B cell:
+  subtypes:
+    - name: B_prol
+      markers: ["Ki-67+"]
+T cell:
+  subtypes:
+      - name: T_tox
+        markers: ["CD8+"]
+        subtypes:
+          - name: T_exh
+            markers: ['PD-1+']
+            subtypes:
+              - name: T_progenitor_exh
+                markers: ['TCF7-TCF1+']
+              - name: T_terminally_exh
+                markers: ['TCF7-TCF1-']
+          - name: T_exh
+            markers: ['Tim3+']
+            subtypes:
+              - name: T_progenitor_exh
+                markers: ['TCF7-TCF1+']
+              - name: T_terminally_exh
+                markers: ['TCF7-TCF1-']
+          - name: T_tox_naive
+            markers: ['CD45RA+', 'CD45RO-']
+          - name: T_tox_mem
+            markers: ["CD45RO+"]   
+      - name: T_h
+        markers: ["CD8-"]
+        subtypes:
+            - name: T_reg
+              markers: ['FOXP3+']
+              subtypes:
+                - name: T_reg_Helios
+                  markers: ['Helios+']
+            - name: T_fh
+              markers: ['PD-1+', 'ICOS+']  
+            - name: T_h_naive
+              markers: ['CD45RA+', 'CD45RO-']
+            - name: T_h_mem
+              markers: ['CD45RO+']              
+Macrophage:
+    subtypes:
+    - name: M2
+      markers: ['CD163+']
+      

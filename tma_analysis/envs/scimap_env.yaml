@@ -1,0 +1,15 @@
+name: scimap_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - jupyter
+  - pip
+  - numpy
+  - pandas
+  - yaml
+  - pip:
+    - torch
+    - scimap
+    - scanpy
+    - backports.tarfile

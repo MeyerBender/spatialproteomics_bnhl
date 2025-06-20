@@ -1,0 +1,12 @@
+paths:
+    image_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/tiffs"
+    marker_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/MarkerList.txt"
+    segmentation_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/spatprot_outputs/segmentation"
+    zarr_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/spatprot_outputs/zarrs"
+    threshold_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/threshold_dfs"
+    mask_path: "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/DLBCL_whole_slide/masks_for_artefact_removal"
+    csv_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/csvs"
+    adata_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/anndata"
+    spatialdata_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/spatialdata"
+    squidpy_csv_path: "/g/huber/projects/CITEseq/CODEX/RICOVER60/whole_tissue_slides_tiffs/squidpy_csvs"
+

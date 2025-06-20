@@ -1,0 +1,18 @@
+name: stardist_env
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.10
+  - jupyter
+  - pip
+  - tifffile
+  - numpy
+  - pandas
+  - yaml
+  - cudatoolkit
+  - cudnn
+  - pip:
+    - stardist
+    - git+https://github.com/sagar87/spatialproteomics
+    - backports.tarfile

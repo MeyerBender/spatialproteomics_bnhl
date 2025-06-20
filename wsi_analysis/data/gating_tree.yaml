@@ -1,0 +1,14 @@
+T cell:
+  subtypes:
+      - name: T_tox
+        markers: ["CD8+"]
+      - name: T_h
+        markers: ["CD8-"]
+        subtypes:
+            - name: T_fh
+              markers: ['ICOS+']             
+Macrophage:
+    subtypes:
+    - name: M2
+      markers: ['CD163+']
+      

@@ -1,0 +1,333 @@
+configfile: "config.yaml"
+import pandas as pd
+
+segmented_zarr_path = config["paths"]["segmented_zarr_path"]
+processed_zarr_path = config["paths"]["processed_zarr_path"]
+abundance_path = config["paths"]["abundance_path"]
+neighborhood_path = config["paths"]["neighborhood_path"]
+nh_zarr_path = config["paths"]["nh_zarr_path"]
+co_occurrences_path = config["paths"]["co_occurrences_path"]
+csv_path = config["paths"]["csv_path"]
+spatstat_csv_path = config["paths"]["spatstat_csv_path"]
+figure_path = config["paths"]["figure_path"]
+data_for_figure_path = config["paths"]["data_for_figure_path"]
+adata_path = config["paths"]["adata_path"]
+squidpy_csv_path = config["paths"]["squidpy_csv_path"]
+adata_with_nhs_path = config["paths"]["adata_with_nhs_path"]
+squidpy_subset_csv_path = config["paths"]["squidpy_subset_csv_path"]
+
+# loading in all samples
+import os
+base_dir = config["paths"]["segmented_zarr_path"]
+sample_files = [os.path.join(base_dir, filename) for filename in os.listdir(base_dir) if filename.endswith('.zarr')]
+sample_names = [os.path.splitext(os.path.basename(filename))[0] for filename in sample_files]
+
+valid_samples_path = config["paths"]["valid_samples_path"]
+sample_names_after_qc = pd.read_csv(valid_samples_path, index_col=0, header=None).index.values
+sample_names_after_qc_no_suffix = [x.rsplit('_', 1)[0] for x in sample_names_after_qc]
+
+# Define grid search parameters for the neighborhood analysis
+#k_values = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+#r_values = [10, 20, 50, 100, 200]
+k_values = [7]
+r_values = [50]
+grid_combinations = [(k, r) for k in k_values for r in r_values]
+labels = ['labels_0', 'labels_1', 'labels_2', 'labels_3']
+
+rule all:
+    input:
+        expand(processed_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc),
+        abundance_path + "/ct_abundances_level_3.csv",
+        expand(
+            neighborhood_path + "/neighborhoods_{r}_{k}.png",
+            k=k_values,
+            r=r_values,
+        ),
+        neighborhood_path + "/network_level_features.csv",
+        # expand(co_occurrences_path + "/co_occurrence_df_{sample}.csv", sample=sample_names_after_qc),
+        # co_occurrences_path + "/co_occurrence_df_full.csv",
+        expand(csv_path + "/{sample}.zarr", sample=sample_names_after_qc),
+        expand(spatstat_csv_path + "/{sample}_pcf_cross.csv", sample=sample_names_after_qc),
+        spatstat_csv_path + "/pcf_cross.csv",
+        data_for_figure_path + "/fig2/degree_size_df.csv",
+        expand(adata_path + "/{sample}.h5ad", sample=sample_names_after_qc),
+        adata_path + "/all_samples.h5ad",
+        expand(adata_path + "/adata_scimap/{label}.h5ad", label=labels),
+        expand(squidpy_csv_path + "/{label}/{sample}.csv", label=labels, sample=sample_names_after_qc),
+        expand(adata_path + "/adata_scimap_conditional/{label}.h5ad", label=labels),
+        abundance_path + "/nh_abundances.csv",
+        abundance_path + "/ct_abundances_nh_subset_level_3.csv",
+        abundance_path + "/heterogeneity_in_b_rich_neighborhoods_df.csv",
+        expand(adata_with_nhs_path + "/{sample}.h5ad", sample=sample_names_after_qc_no_suffix),
+        expand(squidpy_subset_csv_path + "/{label}/{sample}.csv", label=labels, sample=sample_names_after_qc_no_suffix),
+
+      
+rule segment_dapi:
+    input:
+        image_path = segmented_zarr_path + "/{sample}.zarr",
+        marker_path = '/g/huber/users/meyerben/notebooks/spatialproteomics_pipelines/bnhl_processing/data/thresholds.csv'
+    output:
+        zarr_path = directory(segmented_zarr_path + "/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_env_2.yaml"
+    script:
+        "scripts/00_dapi_segmentation.py"
+        
+        
+rule threshold_and_predict_cts:
+    input:
+        zarr_path = segmented_zarr_path + "/{sample}.zarr",
+        threshold_path = '/g/huber/users/meyerben/notebooks/spatialproteomics_pipelines/bnhl_processing/data/thresholds.csv',
+        gating_tree_path = '/g/huber/users/meyerben/notebooks/spatialproteomics_pipelines/bnhl_processing/data/gating_tree.yaml',
+    output:
+        zarr_path = directory(processed_zarr_path + "/{sample}.zarr")
+    conda: 
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/01_threshold_and_predict_cts.py"
+        
+rule count_ct_abundances:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(processed_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc),
+    output:
+        level_0_abundance_path=abundance_path + "/ct_abundances_level_0.csv",
+        level_1_abundance_path=abundance_path + "/ct_abundances_level_1.csv",
+        level_2_abundance_path=abundance_path + "/ct_abundances_level_2.csv",
+        level_3_abundance_path=abundance_path + "/ct_abundances_level_3.csv",
+    conda: 
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/02_count_ct_abundances.py"
+
+rule compute_neighborhoods:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(processed_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc),
+    output:
+        neighborhoods_csv=neighborhood_path + "/neighborhoods_{r}_{k}.csv",
+        nh_composition_csv=neighborhood_path + "/neighborhood-composition_{r}_{k}.csv",
+        plot_path=neighborhood_path + "/neighborhoods_{r}_{k}.png",
+    params:
+        k="{k}",
+        r="{r}",
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/03_compute_neighborhoods.py"
+        
+rule compute_neighborhoods_and_node_features:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(processed_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc),
+        parameter_config_path = "configs/neighborhood_config.yaml"
+    output:
+        zarr_path = directory(nh_zarr_path),
+        network_feature_df = neighborhood_path + "/network_level_features.csv"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/04_compute_neighborhoods_and_features.py"
+        
+rule compute_co_occurrence:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_path = processed_zarr_path + "/{sample}.zarr"
+    output:
+        co_occurrence_df = co_occurrences_path + "/co_occurrence_df_{sample}.csv"
+    conda:
+        "envs/squidpy_env.yaml"
+    script:
+        "scripts/05_compute_co_occurrences.py"
+        
+rule combine_co_occurrence_dfs:
+    input:
+        co_occurrence_dfs = expand(co_occurrences_path + "/co_occurrence_df_{sample}.csv", sample=sample_names_after_qc)
+    output:
+        co_occurrence_df = co_occurrences_path + "/co_occurrence_df_full.csv"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/06_combine_co_occurrences.py"
+        
+rule store_centroids_as_csvs:
+    input:
+        zarr_path = processed_zarr_path + "/{sample}.zarr"
+    output:
+        csv_path = csv_path + "/{sample}.zarr"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/07_store_centroids_as_csv.py"
+
+rule calculate_R_functions:
+    input:
+        csv_input = csv_path + "/{sample}.zarr"
+    output:
+        ripley_csv = spatstat_csv_path + "/{sample}_ripley.csv",
+        pcf_csv = spatstat_csv_path + "/{sample}_pcf.csv",
+        cross_csv = spatstat_csv_path + "/{sample}_cross.csv",
+        pcf_cross_csv = spatstat_csv_path + "/{sample}_pcf_cross.csv"
+    conda:
+        "envs/r_env.yaml"
+    shell:
+        """
+        Rscript scripts/08_ripley_alphabet.R -f {input.csv_input} -o {output.ripley_csv} -s {wildcards.sample}
+        Rscript scripts/08_pcf.R -f {input.csv_input} -o {output.pcf_csv} -s {wildcards.sample}
+        Rscript scripts/08_ripley_alphabet_cross.R -f {input.csv_input} -o {output.cross_csv} -s {wildcards.sample}
+        Rscript scripts/08_pcf_cross.R -f {input.csv_input} -o {output.pcf_cross_csv} -s {wildcards.sample}
+        """
+
+rule concatentate_spatstat_results:
+    input:
+        ripley_csv = expand(spatstat_csv_path + "/{sample}_ripley.csv", sample=sample_names_after_qc),
+        pcf_csv = expand(spatstat_csv_path + "/{sample}_pcf.csv", sample=sample_names_after_qc),
+        cross_csv = expand(spatstat_csv_path + "/{sample}_cross.csv", sample=sample_names_after_qc),
+        pcf_cross_csv = expand(spatstat_csv_path + "/{sample}_pcf_cross.csv", sample=sample_names_after_qc)        
+    output:
+        ripley_merge = spatstat_csv_path + "/alphabet.csv",
+        pcf_merge = spatstat_csv_path + "/pcf.csv",
+        cross_merge = spatstat_csv_path + "/alphabet_cross.csv",
+        pcf_cross_merge = spatstat_csv_path + "/pcf_cross.csv"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/09_concatenate_spatstat_results.py"
+        
+rule store_as_anndata:
+    input:
+        zarr_path = processed_zarr_path + "/{sample}.zarr"
+    output:
+        adata_path = adata_path + "/{sample}.h5ad"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/11_export_to_anndata.py"
+        
+rule combine_anndatas:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        anndata_paths=expand(adata_path + "/{sample}.h5ad", sample=sample_names_after_qc),
+    output:
+        anndata_path = adata_path + "/all_samples.h5ad"
+    conda:
+        "envs/spatialproteomics_env.yaml"
+    script:
+        "scripts/12_combine_anndatas.py"
+        
+rule scimap:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        anndata_path = adata_path + "/all_samples.h5ad"
+    output:
+        anndata_path = adata_path + "/adata_scimap/{label}.h5ad"
+    params:
+        label=lambda wildcards: wildcards.label  # Pass the label as a wildcard
+    conda:
+        "envs/scimap_env.yaml"
+    script:
+        "scripts/13_scimap.py"
+        
+rule squidpy_nhood_enrichment:
+    input:
+        metadata_path = "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        anndata_path = adata_path + "/{sample}.h5ad"
+    output:
+        csv_path = squidpy_csv_path + "/{label}/{sample}.csv"
+    params:
+        label=lambda wildcards: wildcards.label
+    conda:
+        "envs/squidpy_env.yaml"
+    script:
+        "scripts/14_squidpy.py"
+        
+rule scimap_conditional:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        anndata_path = adata_path + "/all_samples.h5ad"
+    output:
+        anndata_path = adata_path + "/adata_scimap_conditional/{label}.h5ad"
+    params:
+        label=lambda wildcards: wildcards.label  # Pass the label as a wildcard
+    conda:
+        "envs/scimap_conditional_env.yaml"
+    script:
+        "scripts/15_scimap_conditional.py"
+        
+rule count_nh_abundances:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(nh_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc_no_suffix),
+    output:
+        abundance_path=abundance_path + "/nh_abundances.csv",
+    conda: 
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/16_count_nh_abundances.py"
+        
+# === SUBSETTING OF TWO NEIGHBORHOODS === 
+rule count_ct_abundances_within_neighborhood:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(nh_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc_no_suffix),
+    output:
+        level_0_abundance_path=abundance_path + "/ct_abundances_nh_subset_level_0.csv",
+        level_1_abundance_path=abundance_path + "/ct_abundances_nh_subset_level_1.csv",
+        level_2_abundance_path=abundance_path + "/ct_abundances_nh_subset_level_2.csv",
+        level_3_abundance_path=abundance_path + "/ct_abundances_nh_subset_level_3.csv",
+    conda: 
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/17_count_ct_abundances_within_neighborhood.py"
+
+rule quantify_heterogeneity_within_neighborhoods:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(nh_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc_no_suffix),
+    output:
+        csv_path=abundance_path + "/heterogeneity_in_b_rich_neighborhoods_df.csv"
+    conda: 
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/18_quantify_heterogeneity_within_neighborhoods.py"
+        
+rule store_as_anndata_with_nhs:
+    input:
+        zarr_path = nh_zarr_path + "/{sample}.zarr"
+    output:
+        adata_path = adata_with_nhs_path + "/{sample}.h5ad"
+    conda:
+        "envs/spatialproteomics_env_3.yaml"
+    script:
+        "scripts/11_export_to_anndata.py"
+        
+rule squidpy_nhood_enrichment_subset:
+    input:
+        metadata_path = "/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        anndata_path = adata_with_nhs_path + "/{sample}.h5ad"
+    output:
+        csv_path = squidpy_subset_csv_path + "/{label}/{sample}.csv"
+    params:
+        label=lambda wildcards: wildcards.label
+    conda:
+        "envs/squidpy_env.yaml"
+    script:
+        "scripts/19_squidpy_subset.py"
+        
+# =================== FIGURES ===================
+rule compute_dfs_for_figure_2:
+    input:
+        metadata_path="/g/huber/users/meyerben/notebooks/codex_analysis/2024-11-26_bnhl/2025-01-28_bnhl_metadata.csv",
+        zarr_files=expand(nh_zarr_path + "/{sample}.zarr", sample=sample_names_after_qc_no_suffix),
+        abundance_df_path="/g/huber/users/meyerben/data/codex/BNHL/ct_abundances/ct_abundances_level_0.csv"
+    output:
+        neighborhood_composition_path = data_for_figure_path + "/fig2/neighborhood_composition.csv",
+        celltype_abundance_df = data_for_figure_path + "/fig2/celltype_abundance.csv",
+        lda_loadings_path = data_for_figure_path + "/fig2/lda_loadings.csv",
+        lda_path = data_for_figure_path + "/fig2/lda_df.csv",
+        degree_size_df_path = data_for_figure_path + "/fig2/degree_size_df.csv",
+        lda_ev_path = data_for_figure_path + "/fig2/lda_ev.csv"
+    conda:
+        "envs/spatialproteomics_env.yaml"
+    script:
+        "scripts/10_create_dfs_for_figure_2.py"

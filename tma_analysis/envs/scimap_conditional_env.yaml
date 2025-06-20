@@ -1,0 +1,15 @@
+name: scimap_conditional_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - jupyter
+  - pip
+  - numpy
+  - pandas
+  - yaml
+  - pip:
+    - torch
+    - git+https://github.com/chiarasch/scimap.git@delaunay_nbh  # this is Chiara's branch
+    - scanpy
+    - backports.tarfile

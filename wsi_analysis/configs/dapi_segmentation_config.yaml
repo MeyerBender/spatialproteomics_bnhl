@@ -1,0 +1,4 @@
+segmentation:
+    min_cell_size: 50
+    max_cell_size: 600
+    mask_growth_pixels: 2

@@ -1,0 +1,11 @@
+name: squidpy_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - git+https://github.com/sagar87/spatialproteomics
+    - torch
+    - squidpy
+    - dask==2024.11.2

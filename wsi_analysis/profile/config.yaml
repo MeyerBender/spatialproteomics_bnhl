@@ -1,0 +1,58 @@
+__use_yte__: true
+slurm: true
+jobs: 8
+latency-wait: 60
+use-conda: true
+default-resources:
+    slurm_account: huber
+    slurm_partition: htc-el8
+    runtime: 4320
+set-resources:
+    dapi_segmentation:
+        slurm_partition: bigmem
+        # slurm_extra: "--exclude=gpu[38-39] -G 1 -n 2"
+        mem_mb: 1024000
+    dapi_segmentation_processing:
+        slurm_partition: bigmem
+        # slurm_extra: "--exclude=gpu[38-39] -G 1 -n 2"
+        mem_mb: 512000
+    combine_into_zarr:
+        slurm_partition: bigmem
+        mem_mb: 512000
+    dapi_segmentation_stardist:
+        slurm_partition: bigmem
+        mem_mb: 512000
+    dapi_segmentation_processing_stardist:
+        slurm_partition: bigmem
+        # slurm_extra: "--exclude=gpu[38-39] -G 1 -n 2"
+        mem_mb: 512000
+    combine_into_zarr_stardist:
+        slurm_partition: bigmem
+        mem_mb: 512000
+    threshold_and_predict_cts:
+        slurm_partition: bigmem
+        mem_mb: 256000
+    homomorphic_filtering:
+        slurm_partition: bigmem
+        mem_mb: 256000
+    threshold_and_predict_cts_from_homomorphic:
+        slurm_partition: bigmem
+        mem_mb: 256000
+    threshold_and_predict_cts_with_background_correction:
+        slurm_partition: bigmem
+        mem_mb: 256000
+    predict_subtypes_with_background_correction:
+        slurm_partition: bigmem
+        mem_mb: 256000
+    calculate_ripley:
+        slurm_partition: bigmem
+        mem_mb: 128000
+    store_as_anndata:
+        slurm_partition: bigmem
+        mem_mb: 64000
+    squidpy_nhood_enrichment:
+        slurm_partition: bigmem
+        mem_mb: 128000
+    store_as_spatialdata:
+        slurm_partition: bigmem
+        mem_mb: 128000
