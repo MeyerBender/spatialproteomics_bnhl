@@ -13,3 +13,4 @@ dependencies:
     - git+https://github.com/chiarasch/scimap.git@delaunay_nbh  # this is Chiara's branch
     - scanpy
     - backports.tarfile
+    - zarr==2.10.3
