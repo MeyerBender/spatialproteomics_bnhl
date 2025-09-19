@@ -18,9 +18,9 @@ sample_prefix = '_'.join(sample_id.split('_')[:-1])
 
 # === dictionary mapping from cell types to markers ===CD
 # loading the thresholds from multirazor
-ct_marker_dict = {'B cell': 'PAX5', 'T cell': 'CD3', 'Myeloid cell': 'CD11b', 'Dendritic cell': 'CD11c', 'Macrophage': 'CD68', 'Stromal cell': 'CD90', 'Stromal cell': 'Podoplanin', 'Endothelial cell': 'CD31', 'Endothelial cell': 'CD34'}
-channels = list(ct_marker_dict.values())
-labels = list(ct_marker_dict.keys())
+marker_ct_dict = {'PAX5': 'B cell', 'CD3': 'T cell', 'CD11b': 'Myeloid cell', 'CD11c': 'Dendritic cell', 'CD68': 'Macrophage', 'CD90': 'Stromal cell', 'Podoplanin': 'Stromal cell', 'CD31': 'Endothelial cell', 'CD34': 'Endothelial cell'}
+channels = list(marker_ct_dict.keys())
+labels = list(marker_ct_dict.values())
 
 # === loading the binarazor df ===
 threshold_df = pd.read_csv(threshold_path)
@@ -51,12 +51,14 @@ if valid_sample:
     ds = (ds.pp.threshold(quantiles, channels=channels)
                 .pp.add_quantification(func='intensity_mean')
                 .pp.transform_expression_matrix(method='arcsinh')
-                .la.predict_cell_types_argmax(ct_marker_dict)
+                .la.predict_cell_types_argmax(marker_ct_dict)
                 )
 
     # === binarizing functional markers ===
     # dropping NAs here because the exported table contains some channels for which we do not have valid thresholds
     threshold_df_tmp = threshold_df[(threshold_df['sample'] == sample_id) & (threshold_df['status'] == 'reviewed')].dropna()
+    # Exclude DAPI
+    threshold_df_tmp = threshold_df_tmp[threshold_df_tmp['channel'] != 'DAPI']
 
     markers_for_binarization = ['TCF7/TCF1' if marker == 'TCF7-TCF1' else marker for marker in threshold_df_tmp['channel'].values]
     thresholds_for_binarization = threshold_df_tmp['lower'].values
@@ -103,4 +105,4 @@ else:
     
 # === storing the resulting dataset ===
 # redoing quantification so that the functional markers are also quantified properly
-ds_final.pp.drop_layers('_intensity').pp.add_quantification().drop_encoding().to_zarr(output_path)
+ds_final.pp.drop_layers('_intensity').pp.add_quantification(func='intensity_mean').pp.transform_expression_matrix(method='arcsinh').drop_encoding().to_zarr(output_path)
