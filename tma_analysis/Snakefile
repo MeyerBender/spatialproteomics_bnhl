@@ -326,7 +326,8 @@ rule compute_dfs_for_figure_2:
         lda_loadings_path = data_for_figure_path + "/fig2/lda_loadings.csv",
         lda_path = data_for_figure_path + "/fig2/lda_df.csv",
         degree_size_df_path = data_for_figure_path + "/fig2/degree_size_df.csv",
-        lda_ev_path = data_for_figure_path + "/fig2/lda_ev.csv"
+        lda_ev_path = data_for_figure_path + "/fig2/lda_ev.csv",
+        lda_feature_df_path = data_for_figure_path + "/fig2/lda_feature_df.csv"
     conda:
         "envs/spatialproteomics_env.yaml"
     script:

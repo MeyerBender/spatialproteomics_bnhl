@@ -12,6 +12,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 metadata_path = snakemake.input.metadata_path
 abundance_df_path = snakemake.input.abundance_df_path
 files = snakemake.input.zarr_files
+lda_feature_df_path = snakemake.input.lda_feature_df_path
 
 entity_colors = {'LN': '#9dcbec', # light blue
                  'MZL': '#E2AFAC', 
@@ -156,6 +157,8 @@ for sample, ds in tqdm(sample_dict.items()):
 df_final = pd.DataFrame(dfs)
 df_final.columns = all_cts + all_nhs + ['Degree (mean)', 'Homophily (mean)', 'Inter-label connectivity (mean)', 'Diversity index (mean)', 'Number of cells', 'Cell area (mean)', 'Cell eccentricity (mean)', 'sample_id', 'patient_id', 'entity']
 df_final['entity_class'] = [entity_grouping_dict[x] for x in df_final['entity']]
+
+df_final.to_csv(lda_feature_df_path)
 
 # running LDA
 # Specify columns to exclude from scaling
