@@ -24,22 +24,23 @@ entity_class_colors = {'LN': '#9dcbec', 'indolent': '#E2AFAC', 'aggressive': '#7
 # red, blue, green, yellow, purple, teal (from the nature color palette: https://www.nature.com/documents/natrev-artworkguide.pdf) 
 celltype_colors = {'B cell': '#5799d1', 'T cell': '#ebc850', 'Myeloid cell': '#de6866', 'Dendritic cell': '#4cbcbd', 'Macrophage': '#bb7cb4', 'Stromal cell': '#62b346', 'Endothelial cell': '#bf997d'}
 
-nh_mapping_dict = {'Neighborhood 0': 'T/Dendritic',
-                      'Neighborhood 1': 'T',
-                      'Neighborhood 2': 'Mixed',
-                      'Neighborhood 3': 'B_prol/T_fh',
-                      'Neighborhood 4': 'T_h/T_reg',
-                      'Neighborhood 5': 'B',
-                      'Neighborhood 6': 'Myeloid/Macro'}
+nh_mapping_dict = {
+    'Neighborhood 0': 'T/Dendritic',
+    'Neighborhood 1': 'T',
+    'Neighborhood 2': 'B',
+    'Neighborhood 3': 'Myeloid/Macro',
+    'Neighborhood 4': 'T_h/T_reg',
+    'Neighborhood 5': 'Mixed',
+    'Neighborhood 6': 'B_prol/T_fh',
+}
 
-# colors for neighborhoods
-neighborhood_colors = {'Neighborhood 5': '#5799d1',
-                       'Neighborhood 3': '#154e91',
-                       'Neighborhood 0': '#fef1c3',
-                       'Neighborhood 1': '#ebc850',
-                       'Neighborhood 4': '#cca02d',
-                       'Neighborhood 6': '#de6866',
-                       'Neighborhood 2': '#c8ceda'}
+neighborhood_colors = {'Neighborhood 5': '#c8ceda',  # Mixed
+                       'Neighborhood 3': '#de6866',  # myeloid macro
+                       'Neighborhood 0': '#fef1c3',  # T dendritic
+                       'Neighborhood 1': '#ebc850',  # T
+                       'Neighborhood 4': '#cca02d',  # T h T reg
+                       'Neighborhood 6': '#154e91',  # B prol
+                       'Neighborhood 2': '#5799d1'}  # B
 
 metadata = pd.read_csv(metadata_path, index_col=0)
 

@@ -6,21 +6,23 @@ import spatialproteomics as sp
 metadata = pd.read_csv(snakemake.input.metadata_path, index_col=0)
 files = snakemake.input.zarr_files
 
-nh_mapping_dict = {'Neighborhood 0': 'T/Dendritic',
-                      'Neighborhood 1': 'T',
-                      'Neighborhood 2': 'Mixed',
-                      'Neighborhood 3': 'B_prol/T_fh',
-                      'Neighborhood 4': 'T_h/T_reg',
-                      'Neighborhood 5': 'B',
-                      'Neighborhood 6': 'Myeloid/Macro'}
+nh_mapping_dict = {
+    'Neighborhood 0': 'T/Dendritic',
+    'Neighborhood 1': 'T',
+    'Neighborhood 2': 'B',
+    'Neighborhood 3': 'Myeloid/Macro',
+    'Neighborhood 4': 'T_h/T_reg',
+    'Neighborhood 5': 'Mixed',
+    'Neighborhood 6': 'B_prol/T_fh',
+}
 
-neighborhood_colors = {'B': '#5799d1',
-                       'B_prol/T_fh': '#154e91',
-                       'T/Dendritic': '#fef1c3',
-                       'T': '#ebc850',
-                       'T_h/T_reg': '#cca02d',
-                       'Myeloid/Macro': '#de6866',
-                       'Mixed': '#c8ceda'}
+neighborhood_colors = {'Neighborhood 5': '#c8ceda',  # Mixed
+                       'Neighborhood 3': '#de6866',  # myeloid macro
+                       'Neighborhood 0': '#fef1c3',  # T dendritic
+                       'Neighborhood 1': '#ebc850',  # T
+                       'Neighborhood 4': '#cca02d',  # T h T reg
+                       'Neighborhood 6': '#154e91',  # B prol
+                       'Neighborhood 2': '#5799d1'}  # B
 
 # === reading the zarrs into the sample dict ===
 sample_dict = {}
