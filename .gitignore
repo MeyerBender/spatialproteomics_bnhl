@@ -1,5 +1,7 @@
 private/
 figures/2025-01-28_bnhl_metadata.csv
+figures/figures/
+figures/source_data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
